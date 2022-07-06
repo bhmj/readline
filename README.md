@@ -2,7 +2,23 @@
 
 ## What is it?
 
-This is a simple readline implementation for CLI. It supports a limited set of keyboard shortcuts and currently works in Linux environment only.
+Readline is an enhanced user input function for terminal-based programs.  
+
+The simplest way of reading user input in Go is something like this:  
+```Go
+scanner := bufio.NewScanner(os.Stdin)
+scanner.Scan()
+input := scanner.Text()
+```
+But this input method is very limited: you can only type characters and delete the last one using Backspace. Readline adds the following editing functionality:  
+* move cursor using arrow keys
+* move one word left or right
+* move to the beginning or to the end of input
+* delete a whole word
+* in case of sequential input: get previously entered commands
+* (TODO) search for previously entered commands
+
+This package is a simple readline implementation. It supports a limited set of keyboard shortcuts and currently works in Linux environment only.
 
 ## Supported keys
 
