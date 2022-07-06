@@ -33,32 +33,51 @@ const (
 )
 
 var (
-	historyLines      []*string
-	historyLineNumber = 0
+	globalHistory map[string][]*string
 )
 
 func init() {
-	historyLines = make([]*string, 0)
+	globalHistory = make(map[string][]*string, 0)
 }
 
 type editable struct {
-	term            *Term
-	str             []rune
-	pos             int
-	modifiedHistory []*string
+	scope             string    // input scope. Allows to have different input history for different inputs.
+	term              *Term     // UNIX terminal attributes
+	str               []rune    // current input
+	pos               int       // current cursor position
+	historyLines      []*string // history for current input scope
+	modifiedHistory   []*string // modified history for current input session
+	historyLineNumber int       // current history line number
 }
 
-func Read() (string, error) {
+// Use optional scope argument to set distinct history for each input type.
+func Read(scope ...string) (string, error) {
 	term := Open()
 	defer term.Close()
 
-	ed := editable{
-		term:            term,
-		str:             make([]rune, 0),
-		modifiedHistory: make([]*string, len(historyLines)+1),
+	// get input scope
+	inputScope := "default"
+	for _, s := range scope {
+		inputScope = s
+		break
 	}
 
-	historyLineNumber = len(historyLines)
+	// prepare global history record if needed
+	var hist []*string
+	var found bool
+	if hist, found = globalHistory[inputScope]; !found {
+		hist = make([]*string, 0)
+		globalHistory[inputScope] = hist
+	}
+
+	ed := editable{
+		scope:             inputScope,
+		term:              term,
+		str:               make([]rune, 0),
+		historyLines:      hist,
+		modifiedHistory:   make([]*string, len(hist)+1),
+		historyLineNumber: len(hist),
+	}
 
 	return ed.dispatch()
 }
@@ -74,7 +93,8 @@ func (ed *editable) dispatch() (string, error) {
 		case keyEnter:
 			if len(ed.str) > 0 {
 				str := string(ed.str)
-				historyLines = append(historyLines, &str)
+				ed.historyLines = append(ed.historyLines, &str)
+				globalHistory[ed.scope] = ed.historyLines
 			}
 			fmt.Println()
 			return string(ed.str), nil
@@ -91,9 +111,9 @@ func (ed *editable) dispatch() (string, error) {
 		case keyCtrlK:
 			ed.deleteToEnd()
 		case keyCtrlP:
-			ed.loadLine(historyLineNumber - 1)
+			ed.loadLine(ed.historyLineNumber - 1)
 		case keyCtrlN:
-			ed.loadLine(historyLineNumber + 1)
+			ed.loadLine(ed.historyLineNumber + 1)
 		case keyCtrlB:
 			ed.moveCursor(-1)
 		case keyCtrlF:
@@ -119,9 +139,9 @@ func (ed *editable) handleControlKeys() error {
 
 	switch controlKey {
 	case keyUp:
-		ed.loadLine(historyLineNumber - 1)
+		ed.loadLine(ed.historyLineNumber - 1)
 	case keyDown:
-		ed.loadLine(historyLineNumber + 1)
+		ed.loadLine(ed.historyLineNumber + 1)
 	case keyLeft:
 		ed.moveCursor(-1)
 	case keyRight:
@@ -244,14 +264,14 @@ func (ed *editable) moveTo(n int) {
 }
 
 func (ed *editable) loadLine(n int) {
-	if n > len(historyLines) || n < 0 {
+	if n > len(ed.historyLines) || n < 0 {
 		return
 	}
 	if len(ed.str) > 0 {
 		// save current editing to modified history
-		if ed.modifiedHistory[historyLineNumber] == nil || *ed.modifiedHistory[historyLineNumber] != string(ed.str) {
+		if ed.modifiedHistory[ed.historyLineNumber] == nil || *ed.modifiedHistory[ed.historyLineNumber] != string(ed.str) {
 			str := string(ed.str)
-			ed.modifiedHistory[historyLineNumber] = &str
+			ed.modifiedHistory[ed.historyLineNumber] = &str
 		}
 		// clear current line in terminal
 		if ed.pos > 0 {
@@ -264,9 +284,9 @@ func (ed *editable) loadLine(n int) {
 	if ed.modifiedHistory[n] != nil {
 		// look in modified history first
 		ed.str = []rune(*ed.modifiedHistory[n])
-	} else if n < len(historyLines) {
+	} else if n < len(ed.historyLines) {
 		// then in history
-		ed.str = []rune(*historyLines[n])
+		ed.str = []rune(*ed.historyLines[n])
 	} else {
 		// otherwise empty string
 		ed.str = []rune{}
@@ -274,7 +294,7 @@ func (ed *editable) loadLine(n int) {
 	ed.pos = len(ed.str)
 	fmt.Print(string(ed.str))
 
-	historyLineNumber = n
+	ed.historyLineNumber = n
 }
 
 func (ed *editable) AppendSymbol(r rune) {

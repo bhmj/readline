@@ -17,6 +17,7 @@ But this input method is very limited: you can only type characters and delete t
 * delete a whole word
 * delete text from the cursor to the beginning or to the end of line
 * in case of sequential inputs: get previously entered commands
+* supports multiple scopes: can have different history for different inputs.
 * (TODO) search for previously entered commands
 
 This package is a simple readline implementation. It supports a limited set of keyboard shortcuts and currently works in Linux environment only.
