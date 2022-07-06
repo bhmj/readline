@@ -138,6 +138,7 @@ func (ed *editable) deleteLastWord() {
 	ed.moveLeft(len(ed.str) - ed.pos)
 }
 
+// dir: -1 = left, 1 = right
 func (ed *editable) moveOverWord(dir int) {
 	prevpos := ed.pos
 	p := skipSpaces(ed.str, ed.pos, dir)
@@ -145,6 +146,7 @@ func (ed *editable) moveOverWord(dir int) {
 	ed.moveTo(ed.pos - prevpos)
 }
 
+// movePos: 0 = at cursor, -1 = left to cursor
 func (ed *editable) deleteSymbol(movePos int) {
 	if ed.pos+movePos < 0 {
 		return
@@ -159,6 +161,7 @@ func (ed *editable) deleteSymbol(movePos int) {
 	ed.moveLeft(len(ed.str) - ed.pos + 1)
 }
 
+// read esc[* sequence
 func readControlKey(term *Term) (int, error) {
 	r, _, err := term.ReadRune()
 	if err != nil {
@@ -174,6 +177,7 @@ func readControlKey(term *Term) (int, error) {
 	return int(r), nil
 }
 
+// dir: <0 left, >0 right
 func (ed *editable) moveCursor(dir int) {
 	if ed.pos+dir < 0 || ed.pos+dir > len(ed.str) {
 		return
