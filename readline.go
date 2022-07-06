@@ -87,7 +87,7 @@ func (ed *editable) dispatch() (string, error) {
 }
 
 func (ed *editable) handleControlKeys() error {
-	controlKey, err := readControlKey(ed.term)
+	controlKey, err := readEscapeSequence(ed.term)
 	if err != nil {
 		return err
 	}
@@ -161,8 +161,7 @@ func (ed *editable) deleteSymbol(movePos int) {
 	ed.moveLeft(len(ed.str) - ed.pos + 1)
 }
 
-// read esc[* sequence
-func readControlKey(term *Term) (int, error) {
+func readEscapeSequence(term *Term) (int, error) {
 	r, _, err := term.ReadRune()
 	if err != nil {
 		return 0, err
