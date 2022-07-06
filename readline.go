@@ -21,31 +21,44 @@ const (
 	keyCtrlW     = 23
 	keyCtrlA     = 1
 	keyCtrlE     = 5
+	keyCtrlK     = 11
+	keyCtrlU     = 21
+	keyCtrlN     = 14
+	keyCtrlP     = 16
+	keyCtrlB     = 2
+	keyCtrlF     = 6
 	keyCtrlArrow = 49
 	keyCtrlLeft  = 68
 	keyCtrlRight = 67
 )
 
 var (
-	inputBuffer     []string
-	inputLineNumber = 0
+	historyLines      []*string
+	historyLineNumber = 0
 )
 
 func init() {
-	inputBuffer = make([]string, 0)
+	historyLines = make([]*string, 0)
 }
 
 type editable struct {
-	term *Term
-	str  []rune
-	pos  int
+	term            *Term
+	str             []rune
+	pos             int
+	modifiedHistory []*string
 }
 
 func Read() (string, error) {
 	term := Open()
 	defer term.Close()
 
-	ed := editable{term: term, str: make([]rune, 0)}
+	ed := editable{
+		term:            term,
+		str:             make([]rune, 0),
+		modifiedHistory: make([]*string, len(historyLines)+1),
+	}
+
+	historyLineNumber = len(historyLines)
 
 	return ed.dispatch()
 }
@@ -60,8 +73,8 @@ func (ed *editable) dispatch() (string, error) {
 		switch r {
 		case keyEnter:
 			if len(ed.str) > 0 {
-				inputBuffer = append(inputBuffer, string(ed.str))
-				inputLineNumber = len(inputBuffer)
+				str := string(ed.str)
+				historyLines = append(historyLines, &str)
 			}
 			fmt.Println()
 			return string(ed.str), nil
@@ -73,6 +86,18 @@ func (ed *editable) dispatch() (string, error) {
 			ed.toStartOfLine()
 		case keyCtrlE:
 			ed.toEndOfLine()
+		case keyCtrlU:
+			ed.deleteToStart()
+		case keyCtrlK:
+			ed.deleteToEnd()
+		case keyCtrlP:
+			ed.loadLine(historyLineNumber - 1)
+		case keyCtrlN:
+			ed.loadLine(historyLineNumber + 1)
+		case keyCtrlB:
+			ed.moveCursor(-1)
+		case keyCtrlF:
+			ed.moveCursor(1)
 		case keyBackspace:
 			ed.deleteSymbol(-1)
 		case Escape:
@@ -94,9 +119,9 @@ func (ed *editable) handleControlKeys() error {
 
 	switch controlKey {
 	case keyUp:
-		ed.loadLine(inputLineNumber - 1)
+		ed.loadLine(historyLineNumber - 1)
 	case keyDown:
-		ed.loadLine(inputLineNumber + 1)
+		ed.loadLine(historyLineNumber + 1)
 	case keyLeft:
 		ed.moveCursor(-1)
 	case keyRight:
@@ -136,6 +161,28 @@ func (ed *editable) deleteLastWord() {
 	ed.moveLeft(l - ed.pos)
 	fmt.Print(string(ed.str[ed.pos:]))
 	ed.moveLeft(len(ed.str) - ed.pos)
+}
+
+func (ed *editable) deleteToStart() {
+	if ed.pos == 0 {
+		return
+	}
+	ed.moveLeft(ed.pos)
+	fmt.Print(strings.Repeat(" ", len(ed.str)))
+	ed.moveLeft(len(ed.str))
+	ed.str = ed.str[ed.pos:]
+	fmt.Print(string(ed.str))
+	ed.moveLeft(len(ed.str))
+	ed.pos = 0
+}
+
+func (ed *editable) deleteToEnd() {
+	if ed.pos == len(ed.str) {
+		return
+	}
+	fmt.Print(strings.Repeat(" ", len(ed.str)-ed.pos))
+	ed.moveLeft(len(ed.str) - ed.pos)
+	ed.str = ed.str[:ed.pos]
 }
 
 // dir: -1 = left, 1 = right
@@ -197,20 +244,37 @@ func (ed *editable) moveTo(n int) {
 }
 
 func (ed *editable) loadLine(n int) {
-	if n >= len(inputBuffer) || n < 0 {
+	if n > len(historyLines) || n < 0 {
 		return
 	}
 	if len(ed.str) > 0 {
+		// save current editing to modified history
+		if ed.modifiedHistory[historyLineNumber] == nil || *ed.modifiedHistory[historyLineNumber] != string(ed.str) {
+			str := string(ed.str)
+			ed.modifiedHistory[historyLineNumber] = &str
+		}
+		// clear current line in terminal
 		if ed.pos > 0 {
 			ed.moveLeft(ed.pos)
 		}
 		fmt.Print(strings.Repeat(" ", len(ed.str)))
 		ed.moveLeft(len(ed.str))
 	}
-	inputLineNumber = n
-	ed.str = []rune(inputBuffer[inputLineNumber])
+
+	if ed.modifiedHistory[n] != nil {
+		// look in modified history first
+		ed.str = []rune(*ed.modifiedHistory[n])
+	} else if n < len(historyLines) {
+		// then in history
+		ed.str = []rune(*historyLines[n])
+	} else {
+		// otherwise empty string
+		ed.str = []rune{}
+	}
 	ed.pos = len(ed.str)
 	fmt.Print(string(ed.str))
+
+	historyLineNumber = n
 }
 
 func (ed *editable) AppendSymbol(r rune) {
@@ -228,40 +292,30 @@ func (ed *editable) AppendSymbol(r rune) {
 }
 
 func (ed *editable) toStartOfLine() {
-	if ed.pos > 0 {
-		ed.moveLeft(ed.pos)
-		ed.pos = 0
-	}
+	ed.moveLeft(ed.pos)
+	ed.pos = 0
 }
 
 func (ed *editable) toEndOfLine() {
-	if ed.pos < len(ed.str) {
-		ed.moveRight(len(ed.str) - ed.pos)
-		ed.pos = len(ed.str)
-	}
+	ed.moveRight(len(ed.str) - ed.pos)
+	ed.pos = len(ed.str)
 }
 
 func skipSpaces(s []rune, pos int, dir int) int {
-	lookahead := 0
-	if dir < 0 {
-		lookahead = -1
-	}
-	for {
-		if pos+lookahead < 0 || pos+lookahead == len(s) || s[pos+lookahead] != ' ' {
-			break
-		}
-		pos += dir
-	}
-	return pos
+	return skipIfSpaces(s, pos, dir, true)
 }
 
 func skipNonSpaces(s []rune, pos int, dir int) int {
+	return skipIfSpaces(s, pos, dir, false)
+}
+
+func skipIfSpaces(s []rune, pos int, dir int, space bool) int {
 	lookahead := 0
 	if dir < 0 {
 		lookahead = -1
 	}
 	for {
-		if pos+lookahead < 0 || pos+lookahead == len(s) || s[pos+lookahead] == ' ' {
+		if pos+lookahead < 0 || pos+lookahead == len(s) || (s[pos+lookahead] != ' ') == space {
 			break
 		}
 		pos += dir

@@ -13,25 +13,33 @@ input := scanner.Text()
 But this input method is very limited: you can only type characters and delete the last one using Backspace. Readline adds the following editing functionality:  
 * move cursor using arrow keys
 * move one word left or right
-* move to the beginning or to the end of input
+* quickly move to the beginning or to the end of input
 * delete a whole word
-* in case of sequential input: get previously entered commands
+* delete text from the cursor to the beginning or to the end of line
+* in case of sequential inputs: get previously entered commands
 * (TODO) search for previously entered commands
 
 This package is a simple readline implementation. It supports a limited set of keyboard shortcuts and currently works in Linux environment only.
+
+## Demo
+![](https://github.com/bhmj/readline/blob/master/demo.gif)
 
 ## Supported keys
 
 Keys | Function
 ---|---
-Left, Right | Move the cursor left or right
+Left, Ctrl+B | Move the cursor to the left
+Right, Ctrl+F | Move the cursor to the right
 Ctrl+Left, Ctrl+Right | Move the cursor one word left or right
 Home, Ctrl+A | Move the cursor to the beginning of line
 End, Ctrl+E |  Move the cursor to the end of line
 Backspace | Delete symbol before the cursor
 Delete | Delete symbol after the cursor
 Ctrl+W | Delete a word before the cursor (words are delimited by spaces)
-Up, Down | Navigate through history
+Ctrl+K | Cut text to the end of line
+Ctrl+U | Cut text to the beginning of line
+Up, Ctrl+P | Get previous line from history
+Down, Ctrl+N | Get next line from history
 
 ## Usage
 
@@ -72,13 +80,14 @@ TODO
 
 ## Roadmap
 
+- [x] save modified history lines within editing session
 - [ ] switch to symbolic escape sequences instead of current dumb state machine
-- [ ] handle `Ctrl+C`
-- [ ] `Ctrl+K` to cut text to the end of line
-- [ ] `Ctrl+U` to cut text to the beginning of line
-- [ ] `Ctrl+N`, `Ctrl+P` == `Up`, `Down`
-- [ ] `Ctrl+B`, `Ctrl+F` == `Left`, `Right`
+- [x] `Ctrl+K` to cut text to the end of line
+- [x] `Ctrl+U` to cut text to the beginning of line
+- [x] `Ctrl+N`, `Ctrl+P` == `Up`, `Down`
+- [x] `Ctrl+B`, `Ctrl+F` == `Left`, `Right`
 - [ ] `Ctrl+R`, `Ctrl+S` to search in history
+- [ ] handle `Ctrl+C`
 
 ## Contributing
 
