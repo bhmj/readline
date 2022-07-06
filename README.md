@@ -82,6 +82,7 @@ TODO
 ## Roadmap
 
 - [x] save modified history lines within editing session
+- [x] add scope argument to `Read()` with distinct history for each scope
 - [ ] switch to symbolic escape sequences instead of current dumb state machine
 - [x] `Ctrl+K` to cut text to the end of line
 - [x] `Ctrl+U` to cut text to the beginning of line
