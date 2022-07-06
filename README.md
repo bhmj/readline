@@ -23,6 +23,7 @@ But this input method is very limited: you can only type characters and delete t
 This package is a simple readline implementation. It supports a limited set of keyboard shortcuts and currently works in Linux environment only.
 
 ## Demo
+(record of [xpression](https://github.com/bhmj/xpression) command-line tool which uses a readline input)
 ![](https://github.com/bhmj/readline/blob/master/demo.gif)
 
 ## Supported keys
@@ -55,14 +56,15 @@ func main() {
     fmt.Println("Type anything or q to quit")
     for {
         fmt.Print("> ")
-	    input, err := readline.Read()
-	    if err != nil {
-			fmt.Printf("error: %v\n", err)
-		    break
-        }
-    	if input == "q" {
+        input, err := readline.Read()
+        if err != nil {
+            fmt.Printf("error: %v\n", err)
             break
         }
+        if input == "q" {
+            break
+        }
+        process(input)
     }
 }
 ```
