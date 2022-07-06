@@ -23,7 +23,7 @@ But this input method is very limited: you can only type characters and delete t
 This package is a simple readline implementation. It supports a limited set of keyboard shortcuts and currently works in Linux environment only.
 
 ## Demo
-(record of [xpression](https://github.com/bhmj/xpression) command-line tool which uses a readline input)
+(record of [xpression](https://github.com/bhmj/xpression) command-line tool which uses a readline input)  
 ![](https://github.com/bhmj/readline/blob/master/demo.gif)
 
 ## Supported keys
