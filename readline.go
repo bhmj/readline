@@ -6,6 +6,8 @@ import (
 )
 
 const (
+	defaultHistorySize = 200
+
 	Escape = 27
 
 	keyTab       = 9
@@ -33,11 +35,13 @@ const (
 )
 
 var (
-	globalHistory map[string][]*string
+	globalHistory     map[string][]*string
+	globalHistorySize map[string]int
 )
 
 func init() {
 	globalHistory = make(map[string][]*string, 0)
+	globalHistorySize = make(map[string]int, 0)
 }
 
 type editable struct {
@@ -46,40 +50,69 @@ type editable struct {
 	str               []rune    // current input
 	pos               int       // current cursor position
 	historyLines      []*string // history for current input scope
+	historySize       int       // history size for current input scope
 	modifiedHistory   []*string // modified history for current input session
 	historyLineNumber int       // current history line number
 }
 
-// Use optional scope argument to set distinct history for each input type.
+func scopeName(scope []string) string {
+	result := "default"
+	for _, s := range scope {
+		return s
+	}
+	return result
+}
+
+// HistorySize sets the history capacity for the selected scope. If 'scope' is not passed, it is set to 'default'.
+func HistorySize(size int, scope ...string) {
+	inputScope := scopeName(scope)
+	if size <= 0 {
+		size = defaultHistorySize
+	}
+	globalHistorySize[inputScope] = size
+}
+
+// Read starts interactive user input. The 'scope' parameter selects distinct history
+// for the named scope, so you can have several inputs with different history.
+// Returns entered string or error.
 func Read(scope ...string) (string, error) {
 	term := Open()
 	defer term.Close()
 
-	// get input scope
-	inputScope := "default"
-	for _, s := range scope {
-		inputScope = s
-		break
-	}
+	inputScope := scopeName(scope)
 
 	// prepare global history record if needed
 	var hist []*string
 	var found bool
 	if hist, found = globalHistory[inputScope]; !found {
 		hist = make([]*string, 0)
-		globalHistory[inputScope] = hist
 	}
+	// limit history size
+	historySize := getHistorySize(inputScope)
+	if len(hist) > historySize {
+		hist = hist[len(hist)-historySize:]
+	}
+	globalHistory[inputScope] = hist
 
 	ed := editable{
 		scope:             inputScope,
 		term:              term,
 		str:               make([]rune, 0),
 		historyLines:      hist,
+		historySize:       historySize,
 		modifiedHistory:   make([]*string, len(hist)+1),
 		historyLineNumber: len(hist),
 	}
 
 	return ed.dispatch()
+}
+
+func getHistorySize(scope string) int {
+	size, found := globalHistorySize[scope]
+	if !found {
+		return defaultHistorySize
+	}
+	return size
 }
 
 func (ed *editable) dispatch() (string, error) {

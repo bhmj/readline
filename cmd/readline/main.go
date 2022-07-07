@@ -22,10 +22,13 @@ Editing
 History
     Up/Down arrow       to get previous/next line from history
 
-    q to quit
+History size is set to 20 lines
+
+q to quit
 `
 
 	fmt.Println(msg)
+	readline.HistorySize(20)
 	for {
 		fmt.Print("> ")
 		input, err := readline.Read()
