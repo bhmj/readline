@@ -55,6 +55,7 @@ import (
 
 func main() {
     fmt.Println("Type anything or q to quit")
+    readline.HistorySize(20) // history capacity 20 lines max
     for {
         fmt.Print("> ")
         input, err := readline.Read()
